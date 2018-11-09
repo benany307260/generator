@@ -32,7 +32,7 @@ public class CodeGenerateUtils {
     private final String USER = "root";
     private final String PASSWORD = "123456";
     private final String DRIVER = "com.mysql.jdbc.Driver";
-    private final String diskPath = "F:\\temp\\new\\";
+    private final String diskPath = "I:\\temp\\new\\";
     private final String changeTableName = replaceUnderLineAndUpperCase(tableName);
     
     /**
@@ -44,7 +44,23 @@ public class CodeGenerateUtils {
      * 项目目录/名称
      */
     private final String artifact = "autodemo";
+    
+    /**
+     * 项目版本号
+     */
+    private final String version = "0.0.1-SNAPSHOT";
+    
+    /**
+     * 项目名称
+     */
+    private final String projectName = "测试项目";
 
+    /**
+     * 项目描述
+     */
+    private final String projectDescription = "测试项目";
+    
+    
     public Connection getConnection() throws Exception{
         Class.forName(DRIVER);
         Connection connection= DriverManager.getConnection(URL, USER, PASSWORD);
@@ -54,7 +70,25 @@ public class CodeGenerateUtils {
     public static void main(String[] args) throws Exception{
         CodeGenerateUtils codeGenerateUtils = new CodeGenerateUtils();
         //codeGenerateUtils.generate();
-        codeGenerateUtils.generateSpringbootProject(codeGenerateUtils.diskPath, codeGenerateUtils.group, codeGenerateUtils.artifact);
+        
+        codeGenerateUtils.generateSpringbootProject(codeGenerateUtils.diskPath, codeGenerateUtils.group, codeGenerateUtils.artifact, 
+        		codeGenerateUtils.version, codeGenerateUtils.projectName, codeGenerateUtils.projectDescription);
+    }
+    
+    private void generateSpringbootProject(String diskPath, String group, String artifact, 
+    		String version, String projectName, String projectDescription) throws Exception
+    {
+    	// 源码目录相对路径
+        final String srcFolderPath = artifact + "\\src\\main\\java\\" + group.replace(".", "\\") + "\\" +artifact;
+    	
+        // 创建项目目录
+        generateSpringbootFolder(diskPath, srcFolderPath);
+        
+        // 创建pom文件
+        generatePomFile(diskPath, group, artifact, version, artifact, artifact);
+        
+        // 创建启动程序入口文件
+        generateApplicationFile(diskPath, srcFolderPath, group, artifact);
     }
 
     public void generate() throws Exception{
@@ -92,7 +126,7 @@ public class CodeGenerateUtils {
      * @param artifact 工作目录，如demo
      * @throws Exception
      */
-    private void generateSpringbootProject(String diskPath, String group, String artifact) throws Exception
+    private void generateSpringbootFolder(String diskPath, String srcFolderPath) throws Exception
     {
     	/*
     	 * 1.创建项目文件夹
@@ -114,8 +148,8 @@ public class CodeGenerateUtils {
     	 * 2.创建源码文件夹
     	 */
     	// 源码文件夹路径
-    	String srcFolderPath = diskPath + artifact + "\\src\\main\\java\\" + group.replace(".", "\\");
-    	File srcFolder = new File(srcFolderPath);
+    	String srcFolderAbsolutePath = diskPath + srcFolderPath;
+    	File srcFolder = new File(srcFolderAbsolutePath);
     	// 如果路径不存在,则创建  
     	if (!srcFolder.getParentFile().exists()) {  
     		srcFolder.getParentFile().mkdirs();  
@@ -143,29 +177,67 @@ public class CodeGenerateUtils {
     	}
     }
     
-    private void generatePomFile(String diskPath, String artifact, ResultSet resultSet) throws Exception{
+    /**
+     * 创建POM文件
+     * @param diskPath
+     * @param group
+     * @param artifact
+     * @param version
+     * @param projectName
+     * @param projectDescription
+     * @throws Exception
+     */
+    private void generatePomFile(String diskPath, String group, String artifact, String version, String projectName, String projectDescription) throws Exception{
         final String suffix = "pom.xml";
         final String path = diskPath + artifact + "\\" + suffix;
         final String templateName = "pom.ftl";
         File pomFile = new File(path);
-        
+        if (!pomFile.getParentFile().exists()) {  
+        	pomFile.getParentFile().mkdirs();  
+    	}
         
         Map<String,Object> dataMap = new HashMap<>();
-        dataMap.put("table_name_small",tableName);
-        dataMap.put("table_name",changeTableName);
-        dataMap.put("author",AUTHOR);
-        dataMap.put("date",CURRENT_DATE);
-        dataMap.put("package_name",packageName);
-        dataMap.put("table_annotation",tableAnnotation);
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.put("version", version);
+        dataMap.put("project_name", projectName);
+        dataMap.put("project_description", projectDescription);
         
         FileOutputStream fos = new FileOutputStream(pomFile);
         Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
         Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
         template.process(dataMap,out);
-        
-        generateFileByTemplate(templateName, pomFile, dataMap);
-
     }
+    
+    private void generateApplicationFile(String diskPath, String srcFolderPath, String group, String artifact) throws Exception{
+    	final String name = toUpperFristChar(artifact);
+        final String suffix = name + "Application.java";
+        final String path = diskPath + srcFolderPath + "\\" + suffix;
+        final String templateName = "Application.ftl";
+        File pomFile = new File(path);
+        if (!pomFile.getParentFile().exists()) {  
+        	pomFile.getParentFile().mkdirs();  
+    	}
+        
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        
+        FileOutputStream fos = new FileOutputStream(pomFile);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
+    
+	public static String toUpperFristChar(String string) {
+		try {
+			char[] charArray = string.toCharArray();
+			charArray[0] -= 32;
+			return String.valueOf(charArray);
+		} catch (Exception e) {
+			return string;
+		}
+	}
 
     private void generateModelFile(ResultSet resultSet) throws Exception{
 

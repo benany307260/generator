@@ -23,17 +23,17 @@ import freemarker.template.Template;
  */
 public class CodeGenerateUtils {
 
-    private final String AUTHOR = "ben";
-    private final String CURRENT_DATE = "2018/11/09";
-    private final String tableName = "sys_user";
-    private final String packageName = "com.evada.pm.process.manage";
-    private final String tableAnnotation = "操作员";
+    //private final String AUTHOR = "ben";
+    //private final String CURRENT_DATE = "2018/11/09";
+    //private final String tableName = "sys_user";
+    //private final String packageName = "com.evada.pm.process.manage";
+    //private final String tableAnnotation = "操作员";
     private final String URL = "jdbc:mysql://192.169.6.137:3406/mytest?characterEncoding=UTF-8&serverTimezone=UTC";
     private final String USER = "root";
     private final String PASSWORD = "123456";
     private final String DRIVER = "com.mysql.jdbc.Driver";
     private final String diskPath = "F:\\temp\\new\\";
-    private final String changeTableName = replaceUnderLineAndUpperCase(tableName);
+    //private final String changeTableName = replaceUnderLineAndUpperCase(tableName);
     
     /**
      * 组织
@@ -43,7 +43,7 @@ public class CodeGenerateUtils {
     /**
      * 项目目录/名称
      */
-    private final String artifact = "autodemo";
+    private final String artifact = "testdemo";
     
     /**
      * 项目版本号
@@ -103,7 +103,7 @@ public class CodeGenerateUtils {
     /**
      * 日志文件目录
      */
-    private final String loggingFile = "/usr/local/odc-admin/logs/application.log";
+    private final String loggingFile = "/usr/local/application/logs/application.log";
     
     
     
@@ -150,6 +150,26 @@ public class CodeGenerateUtils {
             // 实体类名称
             final String entityName = replaceUnderLineAndUpperCase(tableName);
             
+            Map<String,Object> paramMap = new HashMap<>();
+            paramMap.put("group", group);
+            paramMap.put("artifact", artifact);
+            
+            // 生成Meta类
+            String path = diskPath + srcFolderPath + "\\bean\\dto\\Meta.java";
+            generateFile(path, "Meta.ftl", paramMap);
+            
+            // 生成ResponseBean类
+            path = diskPath + srcFolderPath + "\\bean\\dto\\ResponseBean.java";
+            generateFile(path, "ResponseBean.ftl", paramMap);
+            
+            // 生成Error类
+            path = diskPath + srcFolderPath + "\\bean\\errorcode\\Error.java";
+            generateFile(path, "Error.ftl", paramMap);
+            
+            // 生成ErrorCode类
+            path = diskPath + srcFolderPath + "\\bean\\errorcode\\ErrorCode.java";
+            generateFile(path, "ErrorCode.ftl", paramMap);
+            
             // 生成entity
             generateEntityFile(diskPath, srcFolderPath, group, artifact, tableName, entityName, resultSet);
             
@@ -159,8 +179,11 @@ public class CodeGenerateUtils {
             // 生成Service
             generateServiceFile(diskPath, srcFolderPath, group, artifact, entityName, table_description);
             
+            // 生成controller
+            generateControllerFile(diskPath, srcFolderPath, group, artifact, entityName, table_description);
+            
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new Exception(e);
         }finally{
 
         }
@@ -396,7 +419,7 @@ public class CodeGenerateUtils {
         while(resultSet.next()){
         	ColumnClass columnClass = new ColumnClass();
             // id字段
-            if(resultSet.getString("COLUMN_NAME").equals("id")) {
+            if(resultSet.getString("COLUMN_NAME").toLowerCase().equals("id")) {
             	columnClass.setColumnIsId(true);
             }
             else
@@ -458,8 +481,17 @@ public class CodeGenerateUtils {
         template.process(dataMap,out);
     }
     
-    
-    private void generateServiceFile(String diskPath, String srcFolderPath, String group, String artifact, String entityName, String table_description) throws Exception{
+    /**
+     * 生成service
+     * @param diskPath
+     * @param srcFolderPath
+     * @param group
+     * @param artifact
+     * @param entityName
+     * @param table_description
+     * @throws Exception
+     */
+	private void generateServiceFile(String diskPath, String srcFolderPath, String group, String artifact, String entityName, String table_description) throws Exception{
         final String suffix = "Service.java";
         final String path = diskPath + srcFolderPath + "\\service\\" + entityName + suffix;
         final String templateName = "service.ftl";
@@ -480,8 +512,56 @@ public class CodeGenerateUtils {
         template.process(dataMap,out);
     }
     
+	/**
+	 * 生成controller
+	 * @param diskPath
+	 * @param srcFolderPath
+	 * @param group
+	 * @param artifact
+	 * @param entityName
+	 * @param table_description
+	 * @throws Exception
+	 */
+	private void generateControllerFile(String diskPath, String srcFolderPath, String group, String artifact, String entityName, String table_description) throws Exception{
+        final String suffix = "Controller.java";
+        final String path = diskPath + srcFolderPath + "\\controller\\" + entityName + suffix;
+        final String templateName = "controller.ftl";
+        File file = new File(path);
+        if (!file.getParentFile().exists()) {  
+        	file.getParentFile().mkdirs();  
+    	}
+        
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.put("entity_name", entityName);
+        dataMap.put("table_description", table_description);
+        
+        FileOutputStream fos = new FileOutputStream(file);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
     
-    
+	/**
+	 * 生成文件
+	 * @param filePath
+	 * @param templateName
+	 * @param paramMap
+	 * @throws Exception
+	 */
+	private void generateFile(String filePath, String templateName, Map<String,Object> paramMap) throws Exception{
+        File file = new File(filePath);
+        if (!file.getParentFile().exists()) {  
+        	file.getParentFile().mkdirs();  
+    	}
+        
+        FileOutputStream fos = new FileOutputStream(file);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(paramMap, out);
+    }
+	
 /*    public void generate() throws Exception{
         try {
             Connection connection = getConnection();

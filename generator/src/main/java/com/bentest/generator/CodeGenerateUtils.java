@@ -38,12 +38,12 @@ public class CodeGenerateUtils {
     /**
      * 组织
      */
-    private final String group = "com.huang";
+    private final String group = "com.ben";
     
     /**
      * 项目目录/名称
      */
-    private final String artifact = "testdemo";
+    private final String artifact = "abcdemo";
     
     /**
      * 项目版本号
@@ -63,7 +63,7 @@ public class CodeGenerateUtils {
     /**
      * 项目运行监听端口
      */
-    private final String serverPort = "9292";
+    private final String serverPort = "9393";
     
     /**
      * 数据源driver class

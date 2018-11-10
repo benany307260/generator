@@ -28,7 +28,7 @@ public class CodeGenerateUtils {
     private final String tableName = "sys_user";
     private final String packageName = "com.evada.pm.process.manage";
     private final String tableAnnotation = "操作员";
-    private final String URL = "jdbc:mysql://192.169.3.101:3306/test?characterEncoding=UTF-8&serverTimezone=UTC";
+    private final String URL = "jdbc:mysql://192.169.6.137:3406/mytest?characterEncoding=UTF-8&serverTimezone=UTC";
     private final String USER = "root";
     private final String PASSWORD = "123456";
     private final String DRIVER = "com.mysql.jdbc.Driver";
@@ -133,6 +133,63 @@ public class CodeGenerateUtils {
         
         codeGenerateUtils.generateSpringbootProject(codeGenerateUtils.diskPath, codeGenerateUtils.group, codeGenerateUtils.artifact, 
         		codeGenerateUtils.version, codeGenerateUtils.projectName, codeGenerateUtils.projectDescription, configParamMap);
+        
+        String tableName = "user_info";
+        String table_description = "用户";
+        codeGenerateUtils.generate(codeGenerateUtils.diskPath, codeGenerateUtils.group, codeGenerateUtils.artifact, tableName, table_description);
+    }
+    
+    public void generate(String diskPath, String group, String artifact, String tableName, String table_description) throws Exception{
+        try {
+            Connection connection = getConnection();
+            DatabaseMetaData databaseMetaData = connection.getMetaData();
+            ResultSet resultSet = databaseMetaData.getColumns(null,"%", tableName,"%");
+            
+            // 源码目录相对路径
+            final String srcFolderPath = getSpringbootSrcFolderPath(group, artifact);
+            // 实体类名称
+            final String entityName = replaceUnderLineAndUpperCase(tableName);
+            
+            // 生成entity
+            generateEntityFile(diskPath, srcFolderPath, group, artifact, tableName, entityName, resultSet);
+            
+            // 生成Repository
+            generateRepositoryFile(diskPath, srcFolderPath, group, artifact, entityName, table_description);
+            
+            // 生成Service
+            generateServiceFile(diskPath, srcFolderPath, group, artifact, entityName, table_description);
+            
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }finally{
+
+        }
+    }
+    
+    /**
+     * 获取springboot项目源码目录相对路径
+     * @param group
+     * @param artifact
+     * @return
+     */
+    private String getSpringbootSrcFolderPath(String group, String artifact)
+    {
+    	// 源码目录相对路径
+        final String srcFolderPath = artifact + "\\src\\main\\java\\" + group.replace(".", "\\") + "\\" +artifact + "\\";
+        return srcFolderPath;
+    }
+    
+    /**
+     * 获取springboot项目源码目录相对路径
+     * @param group
+     * @param artifact
+     * @return
+     */
+    private String getSpringbootResourceFolderPath(String artifact)
+    {
+    	// 资源目录相对路径
+        final String resourceFolderPath = artifact + "\\src\\main\\resources\\";
+        return resourceFolderPath;
     }
     
     /**
@@ -149,10 +206,10 @@ public class CodeGenerateUtils {
     		String version, String projectName, String projectDescription, Map<String,String> configParamMap) throws Exception
     {
     	// 源码目录相对路径
-        final String srcFolderPath = artifact + "\\src\\main\\java\\" + group.replace(".", "\\") + "\\" +artifact;
+        final String srcFolderPath = getSpringbootSrcFolderPath(group, artifact);
     	
         // 资源目录相对路径
-        final String resourceFolderPath = artifact + "\\src\\main\\resources\\";
+        final String resourceFolderPath = getSpringbootResourceFolderPath(artifact);
         
         // 创建项目目录
         generateSpringbootFolder(diskPath, srcFolderPath);
@@ -167,34 +224,6 @@ public class CodeGenerateUtils {
         generatePropertiesFile(diskPath, resourceFolderPath, group, artifact, configParamMap);
     }
 
-    public void generate() throws Exception{
-        try {
-            Connection connection = getConnection();
-            DatabaseMetaData databaseMetaData = connection.getMetaData();
-            ResultSet resultSet = databaseMetaData.getColumns(null,"%", tableName,"%");
-            //生成Mapper文件
-            generateMapperFile(resultSet);
-            //生成Dao文件
-            //generateDaoFile(resultSet);
-            //生成Repository文件
-            generateRepositoryFile(resultSet);
-            //生成服务层接口文件
-            generateServiceInterfaceFile(resultSet);
-            //生成服务实现层文件
-            generateServiceImplFile(resultSet);
-            //生成Controller层文件
-            generateControllerFile(resultSet);
-            //生成DTO文件
-            generateDTOFile(resultSet);
-            //生成Model文件
-            generateModelFile(resultSet);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }finally{
-
-        }
-    }
-    
     /**
      * 创建springboot项目目录
      * @param diskPath 存放路径
@@ -294,9 +323,10 @@ public class CodeGenerateUtils {
      * @throws Exception
      */
     private void generateApplicationFile(String diskPath, String srcFolderPath, String group, String artifact) throws Exception{
-    	final String name = toUpperFristChar(artifact);
+    	
+    	final String name = StringUtils.capitalize(artifact);
         final String suffix = name + "Application.java";
-        final String path = diskPath + srcFolderPath + "\\" + suffix;
+        final String path = diskPath + srcFolderPath + suffix;
         final String templateName = "Application.ftl";
         File pomFile = new File(path);
         if (!pomFile.getParentFile().exists()) {  
@@ -342,16 +372,144 @@ public class CodeGenerateUtils {
         template.process(dataMap,out);
     }
     
-	public static String toUpperFristChar(String string) {
-		try {
-			char[] charArray = string.toCharArray();
-			charArray[0] -= 32;
-			return String.valueOf(charArray);
-		} catch (Exception e) {
-			return string;
-		}
-	}
+    /**
+     * 创建实体类
+     * @param diskPath
+     * @param srcFolderPath
+     * @param group
+     * @param artifact
+     * @param tableName
+     * @param entityName
+     * @param resultSet
+     * @throws Exception
+     */
+    private void generateEntityFile(String diskPath, String srcFolderPath, String group, String artifact, String tableName, String entityName, ResultSet resultSet) throws Exception{
+        final String suffix = ".java";
+        final String path = diskPath + srcFolderPath + "\\entity\\" + entityName + suffix;
+        final String templateName = "entity.ftl";
+        File file = new File(path);
+        if (!file.getParentFile().exists()) {  
+        	file.getParentFile().mkdirs();  
+    	}
+        
+        List<ColumnClass> columnClassList = new ArrayList<>();
+        while(resultSet.next()){
+        	ColumnClass columnClass = new ColumnClass();
+            // id字段
+            if(resultSet.getString("COLUMN_NAME").equals("id")) {
+            	columnClass.setColumnIsId(true);
+            }
+            else
+            {
+            	columnClass.setColumnIsId(false);
+            }
+            //获取字段名称
+            columnClass.setColumnName(resultSet.getString("COLUMN_NAME"));
+            //获取字段类型
+            columnClass.setColumnType(resultSet.getString("TYPE_NAME"));
+            //转换字段名称，如 sys_name 变成 SysName
+            columnClass.setChangeColumnName(replaceUnderLineAndUpperCase(resultSet.getString("COLUMN_NAME").toLowerCase()));
+            //字段在数据库的注释
+            columnClass.setColumnComment(resultSet.getString("REMARKS"));
+            columnClassList.add(columnClass);
+        }
 
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("model_column", columnClassList);
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.put("table_name", tableName);
+        dataMap.put("entity_name", entityName);
+        
+        FileOutputStream fos = new FileOutputStream(file);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
+    
+    /**
+     * 创建实体的Repository
+     * @param diskPath
+     * @param srcFolderPath
+     * @param group
+     * @param artifact
+     * @param entityName
+     * @param table_description
+     * @throws Exception
+     */
+    private void generateRepositoryFile(String diskPath, String srcFolderPath, String group, String artifact, String entityName, String table_description) throws Exception{
+        final String suffix = "Repository.java";
+        final String path = diskPath + srcFolderPath + "\\jpa\\repository\\" + entityName + suffix;
+        final String templateName = "repository.ftl";
+        File file = new File(path);
+        if (!file.getParentFile().exists()) {  
+        	file.getParentFile().mkdirs();  
+    	}
+        
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.put("entity_name", entityName);
+        dataMap.put("table_description", table_description);
+        
+        FileOutputStream fos = new FileOutputStream(file);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
+    
+    
+    private void generateServiceFile(String diskPath, String srcFolderPath, String group, String artifact, String entityName, String table_description) throws Exception{
+        final String suffix = "Service.java";
+        final String path = diskPath + srcFolderPath + "\\service\\" + entityName + suffix;
+        final String templateName = "service.ftl";
+        File file = new File(path);
+        if (!file.getParentFile().exists()) {  
+        	file.getParentFile().mkdirs();  
+    	}
+        
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.put("entity_name", entityName);
+        dataMap.put("table_description", table_description);
+        
+        FileOutputStream fos = new FileOutputStream(file);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
+    
+    
+    
+/*    public void generate() throws Exception{
+        try {
+            Connection connection = getConnection();
+            DatabaseMetaData databaseMetaData = connection.getMetaData();
+            ResultSet resultSet = databaseMetaData.getColumns(null,"%", tableName,"%");
+            //生成Mapper文件
+            generateMapperFile(resultSet);
+            //生成Dao文件
+            //generateDaoFile(resultSet);
+            //生成Repository文件
+            generateRepositoryFile(resultSet);
+            //生成服务层接口文件
+            generateServiceInterfaceFile(resultSet);
+            //生成服务实现层文件
+            generateServiceImplFile(resultSet);
+            //生成Controller层文件
+            generateControllerFile(resultSet);
+            //生成DTO文件
+            generateDTOFile(resultSet);
+            //生成Model文件
+            generateModelFile(resultSet);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }finally{
+
+        }
+    }
+    
     private void generateModelFile(ResultSet resultSet) throws Exception{
 
         final String suffix = ".java";
@@ -458,8 +616,48 @@ public class CodeGenerateUtils {
         Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
         template.process(dataMap,out);
     }
-
-    public String replaceUnderLineAndUpperCase(String str){
+*/
+    /**
+     * 首字母转大写
+     * @param string
+     * @return
+     */
+	/*public static String toUpperFristChar(String string) {
+		try {
+			char[] charArray = string.toCharArray();
+			charArray[0] -= 32;
+			return String.valueOf(charArray);
+		} catch (Exception e) {
+			return string;
+		}
+	}*/
+	
+	/**
+     * 替换下划线和转大写
+     * @param str
+     * @return
+     */
+	public String replaceUnderLineAndUpperCase(String str){
+		
+		// 以下划线分割字符串
+		final String[] stringArray = str.split("_");
+		
+		StringBuffer sb = new StringBuffer();
+		
+		for(String temp : stringArray)
+		{
+			sb.append(StringUtils.capitalize(temp));
+		}
+        
+        return sb.toString();
+    }
+	
+    /**
+     * 替换下划线和转大写
+     * @param str
+     * @return
+     */
+/*    public String replaceUnderLineAndUpperCase(String str){
         StringBuffer sb = new StringBuffer();
         sb.append(str);
         int count = sb.indexOf("_");
@@ -474,6 +672,6 @@ public class CodeGenerateUtils {
         }
         String result = sb.toString().replaceAll("_","");
         return StringUtils.capitalize(result);
-    }
+    }*/
 
 }

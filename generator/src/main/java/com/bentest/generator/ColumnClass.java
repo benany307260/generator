@@ -14,6 +14,8 @@ public class ColumnClass {
     private String changeColumnName;
     /** 数据库字段注释 **/
     private String columnComment;
+    /** 数据库字段是标识id**/
+    private boolean columnIsId;
 
     public String getColumnComment() {
         return columnComment;
@@ -46,4 +48,14 @@ public class ColumnClass {
     public void setChangeColumnName(String changeColumnName) {
         this.changeColumnName = changeColumnName;
     }
+
+	public boolean isColumnIsId() {
+		return columnIsId;
+	}
+
+	public void setColumnIsId(boolean columnIsId) {
+		this.columnIsId = columnIsId;
+	}
+
+    
 }

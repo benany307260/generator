@@ -18,8 +18,8 @@ import org.apache.commons.lang3.StringUtils;
 import freemarker.template.Template;
 
 /**
- * 描述：代码生成器
- * Created by Ay on 2017/5/1.
+ * 代码生成器
+ *
  */
 public class CodeGenerateUtils {
 
@@ -32,7 +32,7 @@ public class CodeGenerateUtils {
     private final String USER = "root";
     private final String PASSWORD = "123456";
     private final String DRIVER = "com.mysql.jdbc.Driver";
-    private final String diskPath = "I:\\temp\\new\\";
+    private final String diskPath = "F:\\temp\\new\\";
     private final String changeTableName = replaceUnderLineAndUpperCase(tableName);
     
     /**
@@ -60,6 +60,54 @@ public class CodeGenerateUtils {
      */
     private final String projectDescription = "测试项目";
     
+    /**
+     * 项目运行监听端口
+     */
+    private final String serverPort = "9292";
+    
+    /**
+     * 数据源driver class
+     */
+    private final String dsDriverClass = "com.mysql.cj.jdbc.Driver";
+    
+    /**
+     * 数据源连接url
+     */
+    private final String dsConnectUrl = "jdbc:mysql://192.169.6.137:3406/mytest?characterEncoding=UTF-8&serverTimezone=UTC";
+    
+    /**
+     * 数据源连接用户名
+     */
+    private final String dsUsername = "root";
+    
+    /**
+     * 数据源连接密码
+     */
+    private final String dsPassword = "123456";
+    
+    /**
+     * 数据源最大活跃连接数
+     */
+    private final String dsMaxActive = "20";
+    
+    /**
+     * 数据源最小空闲连接数
+     */
+    private final String dsMinIdle = "5";
+    
+    /**
+     * 数据源初始化连接数
+     */
+    private final String dsInitialSize = "5";
+    
+    /**
+     * 日志文件目录
+     */
+    private final String loggingFile = "/usr/local/odc-admin/logs/application.log";
+    
+    
+    
+    
     
     public Connection getConnection() throws Exception{
         Class.forName(DRIVER);
@@ -71,16 +119,41 @@ public class CodeGenerateUtils {
         CodeGenerateUtils codeGenerateUtils = new CodeGenerateUtils();
         //codeGenerateUtils.generate();
         
+        // 项目配置文件配置参数
+        Map<String,String> configParamMap = new HashMap<>();
+        configParamMap.put("server_port", codeGenerateUtils.serverPort);
+        configParamMap.put("ds_driver_class", codeGenerateUtils.dsDriverClass);
+        configParamMap.put("ds_url", codeGenerateUtils.dsConnectUrl);
+        configParamMap.put("ds_username", codeGenerateUtils.dsUsername);
+        configParamMap.put("ds_password", codeGenerateUtils.dsPassword);
+        configParamMap.put("ds_max_active", codeGenerateUtils.dsMaxActive);
+        configParamMap.put("ds_min_idle", codeGenerateUtils.dsMinIdle);
+        configParamMap.put("ds_initial_size", codeGenerateUtils.dsInitialSize);
+        configParamMap.put("logging_file", codeGenerateUtils.loggingFile);
+        
         codeGenerateUtils.generateSpringbootProject(codeGenerateUtils.diskPath, codeGenerateUtils.group, codeGenerateUtils.artifact, 
-        		codeGenerateUtils.version, codeGenerateUtils.projectName, codeGenerateUtils.projectDescription);
+        		codeGenerateUtils.version, codeGenerateUtils.projectName, codeGenerateUtils.projectDescription, configParamMap);
     }
     
+    /**
+     * 生成springboot项目
+     * @param diskPath
+     * @param group
+     * @param artifact
+     * @param version
+     * @param projectName
+     * @param projectDescription
+     * @throws Exception
+     */
     private void generateSpringbootProject(String diskPath, String group, String artifact, 
-    		String version, String projectName, String projectDescription) throws Exception
+    		String version, String projectName, String projectDescription, Map<String,String> configParamMap) throws Exception
     {
     	// 源码目录相对路径
         final String srcFolderPath = artifact + "\\src\\main\\java\\" + group.replace(".", "\\") + "\\" +artifact;
     	
+        // 资源目录相对路径
+        final String resourceFolderPath = artifact + "\\src\\main\\resources\\";
+        
         // 创建项目目录
         generateSpringbootFolder(diskPath, srcFolderPath);
         
@@ -89,6 +162,9 @@ public class CodeGenerateUtils {
         
         // 创建启动程序入口文件
         generateApplicationFile(diskPath, srcFolderPath, group, artifact);
+        
+        // 创建配置文件
+        generatePropertiesFile(diskPath, resourceFolderPath, group, artifact, configParamMap);
     }
 
     public void generate() throws Exception{
@@ -209,6 +285,14 @@ public class CodeGenerateUtils {
         template.process(dataMap,out);
     }
     
+    /**
+     * 创建程序入口
+     * @param diskPath
+     * @param srcFolderPath
+     * @param group
+     * @param artifact
+     * @throws Exception
+     */
     private void generateApplicationFile(String diskPath, String srcFolderPath, String group, String artifact) throws Exception{
     	final String name = toUpperFristChar(artifact);
         final String suffix = name + "Application.java";
@@ -222,6 +306,35 @@ public class CodeGenerateUtils {
         Map<String,Object> dataMap = new HashMap<>();
         dataMap.put("group", group);
         dataMap.put("artifact", artifact);
+        
+        FileOutputStream fos = new FileOutputStream(pomFile);
+        Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);
+        Template template = FreeMarkerTemplateUtils.getTemplate(templateName);
+        template.process(dataMap,out);
+    }
+    
+    /**
+     * 创建配置文件
+     * @param diskPath
+     * @param resourceFolderPath
+     * @param group
+     * @param artifact
+     * @param configParamMap
+     * @throws Exception
+     */
+    private void generatePropertiesFile(String diskPath, String resourceFolderPath, String group, String artifact, Map<String,String> configParamMap) throws Exception{
+        final String suffix = "application.properties";
+        final String path = diskPath + resourceFolderPath + suffix;
+        final String templateName = "properties.ftl";
+        File pomFile = new File(path);
+        if (!pomFile.getParentFile().exists()) {  
+        	pomFile.getParentFile().mkdirs();  
+    	}
+        
+        Map<String,Object> dataMap = new HashMap<>();
+        dataMap.put("group", group);
+        dataMap.put("artifact", artifact);
+        dataMap.putAll(configParamMap);
         
         FileOutputStream fos = new FileOutputStream(pomFile);
         Writer out = new BufferedWriter(new OutputStreamWriter(fos, "utf-8"),10240);

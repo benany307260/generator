@@ -2,16 +2,16 @@
 server.port=${server_port}
 
 #datasource
-spring.datasource.driver-class-name=${driver-class-name}
-spring.datasource.url=${url}
-spring.datasource.username=${username}
-spring.datasource.password=${password}
-spring.datasource.tomcat.max-active=${max-active}
+spring.datasource.driver-class-name=${ds_driver_class}
+spring.datasource.url=${ds_url}
+spring.datasource.username=${ds_username}
+spring.datasource.password=${ds_password}
+spring.datasource.tomcat.max-active=${ds_max_active}
 spring.datasource.tomcat.test-while-idle=true
 spring.datasource.tomcat.validation-query=select 1
 spring.datasource.tomcat.default-auto-commit=false
-spring.datasource.tomcat.min-idle=${min-idle}
-spring.datasource.tomcat.initial-size=${initial-size}
+spring.datasource.tomcat.min-idle=${ds_min_idle}
+spring.datasource.tomcat.initial-size=${ds_initial_size}
 
 #jpa
 #spring.jpa.hibernate.ddl-auto=update
